@@ -10,12 +10,13 @@ import numpy as np
 from pytorch3d.structures import Meshes
 from pytorch3d.renderer import MeshRenderer, TexturesVertex
 from pytorch3d.ops import knn_points
-# from utils import visualize_points
+from utils import visualize_points
+import matplotlib.pyplot as plt
 
 fa = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, flip_input=False)
 eps = 1e-5
 
-def get_mesh_landmark(meshes: Meshes, dummy_renderer: MeshRenderer):
+def get_mesh_landmark(meshes: Meshes, dummy_renderer: MeshRenderer, output_file_prefix: str = None):
     '''
         The meshes should be textured
     '''
@@ -27,6 +28,7 @@ def get_mesh_landmark(meshes: Meshes, dummy_renderer: MeshRenderer):
     textures = TexturesVertex(mesh_verts)
     shape_meshes = Meshes(mesh_verts, mesh_faces, textures)
     rgb_img = dummy_renderer(meshes)[:, :, :, 0, :]
+    plt.imsave(output_file_prefix +'_render_img.png', rgb_img[0].cpu().numpy())
     shape_img = dummy_renderer(shape_meshes)[:, :, :, 0, :]
     rgb_img_uint8 = (rgb_img * 255).permute(0, 3, 1, 2)
     landmarks = fa.get_landmarks_from_batch(rgb_img_uint8)
@@ -57,7 +59,11 @@ def get_mesh_landmark(meshes: Meshes, dummy_renderer: MeshRenderer):
     
     on_surface_mask[:, 61:] = torch.logical_and(on_surface_mask[:, 61:], inner_lip_mask)
     lm_index = knn_points(lm_vertex, mesh_verts).idx[:, :, 0]
+
+    # remove the points that locate on the back of the face
+    on_surface_mask[0, torch.abs(lm_vertex[0, :, 2]) <1e-3] = False 
     
     # visualize_points('./test_data/test_point.png', lm_vertex.squeeze().transpose(0, 1))
+    # np.savetxt("test_data/lm.txt", lm_vertex[0, on_surface_mask[0], :].cpu().numpy())
     
     return lm_index, on_surface_mask

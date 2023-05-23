@@ -12,6 +12,31 @@ import open3d
 from pytorch3d.structures import Meshes, Pointclouds
 
 
+def normalize_to_std(in_mesh: Meshes, std_mesh: Meshes, lm: np.ndarray):
+    '''
+        Normalize the input mesh to the standard mesh
+        input: Meshes object, Meshes object, landmark index
+        return: Meshes object
+    '''
+    assert in_mesh.verts_padded().shape[0] == 1
+    assert std_mesh.verts_padded().shape[0] == 1
+    in_verts = in_mesh.verts_padded()
+    std_verts = std_mesh.verts_padded()
+    in_lm = in_verts[:, lm[:, 1], :]
+    std_lm = std_verts[:, lm[:, 0], :]
+    in_center = torch.mean(in_lm, dim = 1, keepdim = True)
+    std_center = torch.mean(std_lm, dim = 1, keepdim = True)
+    in_centered = in_lm - in_center
+    std_centered = std_lm - std_center
+    in_scale = torch.mean(torch.norm(in_centered, dim = 2))
+    std_scale = torch.mean(torch.norm(std_centered, dim = 2))
+    scale = std_scale / in_scale
+    offset = std_center - in_center * scale
+    out_mesh = in_mesh.scale_verts(scale.item())
+    out_mesh.offset_verts_(offset[0,0])
+    return out_mesh
+
+
 def normalize_mesh(in_mesh: Meshes):
     '''
         Detect the scale of the mesh, centralize and normalize the mesh, 

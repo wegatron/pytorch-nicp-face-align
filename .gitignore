@@ -1,3 +1,4 @@
+.vscode
 # Ignore .obj and .ply Mesh files
 *.obj
 *.ply
@@ -24,3 +25,10 @@ test_data/*
 !test_data/test2.ply
 !test_data/test2_lm.txt
 !test_data/depth_wuhz.mp4
+
+#c++
+obj_process/build
+obj_process/tinyobjloader
+
+output
+output_bak
